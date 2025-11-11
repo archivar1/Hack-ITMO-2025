@@ -1,7 +1,10 @@
 from typing import Dict, Any
+from uuid import UUID
+from app.service import MainService
+
+service = MainService()
 
 
-# ====== ОБРАБОТКА СВОБОДНОГО ТЕКСТА ======
 def process_text(model: Dict[str, Any]) -> str:
     raw = (model.get("raw_text") or "").strip()
     user_id = model.get("user", {}).get("id")
@@ -9,21 +12,69 @@ def process_text(model: Dict[str, Any]) -> str:
     return f"Ты написал{who}: {raw}"
 
 
-# ====== ЗАГЛУШКИ ДЛЯ КОМАНД ======
-def product_count_manual(model: Dict[str, Any]) -> str:
-    return "Заглушка: /product_count_manual — реализация появится позже."
+async def start(model: Dict[str, Any]) -> str:
+    user_id = UUID(model.get("user", {}).get("id"))
+    chat_id = UUID(model.get("chat", {}).get("id", str(user_id)))
+    await service.start_user(user_id, chat_id)
+    return "Бот запущен! Используй команды для работы."
 
-def product_count(model: Dict[str, Any]) -> str:
-    return "Заглушка: /product_count — реализация появится позже."
 
-def change_product(model: Dict[str, Any]) -> str:
-    return "Заглушка: /change_product — реализация появится позже."
+async def product_count_manual(model: Dict[str, Any]) -> str:
+    user_id = UUID(model.get("user", {}).get("id"))
+    product_name = model.get("product_name", "")
+    calories = model.get("calories", 0)
 
-def add_custom_product(model: Dict[str, Any]) -> str:
-    return "Заглушка: /add_custom_product — реализация появится позже."
+    result = await service.product_count_manual(user_id, product_name, calories)
+    if result is None:
+        return "Продукт не найден"
 
-def notify(model: Dict[str, Any]) -> str:
-    return "Заглушка: /notify — реализация появится позже."
+    return f"Можешь съесть {result:.1f}г {product_name}"
 
-def get_product(model: Dict[str, Any]) -> str:
-    return "Заглушка: /get_product — реализация появится позже."
+
+async def product_count(model: Dict[str, Any]) -> str:
+    user_id = UUID(model.get("user", {}).get("id"))
+    days = model.get("days")
+
+    result = await service.product_count(user_id, days)
+    if result is None:
+        return "Не удалось рассчитать"
+
+    days_str = f" за {days} дней" if days else ""
+    return f"Можешь съесть {result:.1f}г{days_str}"
+
+
+async def change_product(model: Dict[str, Any]) -> str:
+    user_id = UUID(model.get("user", {}).get("id"))
+    product_name = model.get("product_name", "")
+
+    result = await service.change_product(user_id, product_name)
+    if not result:
+        return "Продукт не найден"
+
+    return f"Продукт изменён на {product_name}"
+
+
+async def add_custom_product(model: Dict[str, Any]) -> str:
+    user_id = UUID(model.get("user", {}).get("id"))
+    product_name = model.get("product_name", "")
+    calories = model.get("calories", 0)
+
+    result = await service.add_custom_product(user_id, product_name, calories)
+    if not result:
+        return "Продукт уже существует"
+
+    return f"Продукт {product_name} добавлен"
+
+
+async def notify(model: Dict[str, Any]) -> str:
+    return "Уведомления появятся позже"
+
+
+async def get_product(model: Dict[str, Any]) -> str:
+    user_id = UUID(model.get("user", {}).get("id"))
+
+    result = await service.get_product(user_id)
+    if result is None:
+        return "Продукт не найден"
+
+    return f"Текущий продукт: {result}"
