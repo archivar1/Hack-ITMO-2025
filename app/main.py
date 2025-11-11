@@ -23,12 +23,12 @@ async def health_check():
 async def get_calories(food_name: str = Query(...)):
     """
     Получить КБЖУ блюда по названию (GET запрос).
-    
+
     Для блюд из нескольких слов пробелы можно заменить на %20 или +
-    
+
     Args:
         food_name
-    
+
     Returns:
         CaloriesResponse: КБЖУ блюда на 100 г/мл
     """
@@ -51,10 +51,10 @@ async def get_calories(food_name: str = Query(...)):
 async def get_calories_post(request: CaloriesRequest):
     """
     Получить КБЖУ блюда по названию (POST запрос).
-    
+
     Args:
         food_name
-    
+
     Returns:
         CaloriesResponse: КБЖУ блюда на 100 г/мл
     """
