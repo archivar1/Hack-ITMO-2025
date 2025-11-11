@@ -5,6 +5,10 @@ class DefaultSettings(BaseSettings):
     WEBHOOK_URL: str
     SECRET_TOKEN: str
 
+    # FatSecret API OAuth2 credentials
+    FATSECRET_CONSUMER_KEY: str  # client id
+    FATSECRET_CONSUMER_SECRET: str  # client secret
+
     class Config:
         env_file = ".env"
 

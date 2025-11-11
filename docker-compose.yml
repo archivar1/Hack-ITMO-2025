@@ -8,6 +8,8 @@ services:
     environment:
       - WEBHOOK_URL=${WEBHOOK_URL}
       - SECRET_TOKEN=${SECRET_TOKEN}
+      - FATSECRET_CONSUMER_KEY=${FATSECRET_CONSUMER_KEY}
+      - FATSECRET_CONSUMER_SECRET=${FATSECRET_CONSUMER_SECRET}
       - PYTHONPATH=/app
     env_file:
       - .env
