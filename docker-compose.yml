@@ -1,6 +1,28 @@
 services:
-  telegram-bot:
-    build: 
+
+  postgres:
+    container_name: ${POSTGRES_HOST}
+    hostname: ${POSTGRES_HOST}
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    env_file:
+      - ./.env
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+      start_interval: 3s
+
+  app:
+    build:
       context: .
       dockerfile: Dockerfile
     ports:
@@ -10,17 +32,24 @@ services:
       - WEBHOOK_URL=${WEBHOOK_URL}
       - SECRET_TOKEN=${SECRET_TOKEN}
       - PYTHONPATH=/app
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     env_file:
       - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://backend:8000/api/v1/swagger"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
+volumes:
+  pgdata:
 
-networks:
-  default:
-    name: app
