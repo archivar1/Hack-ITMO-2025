@@ -85,6 +85,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Доступные команды:\n"
         "/start — начало работы\n"
         "/help — помощь\n"
+        "/connect_human — подключить Human API для получения данных о здоровье\n"
         "/product_count_manual — подсчёт калорий вручную (сырые данные пойдут в сервис)\n"
         "/product_count — подсчёт по HumanAPI\n"
         "/change_product — сменить текущий продукт\n"
@@ -106,6 +107,9 @@ async def _call_service_and_reply(update: Update, command: str, handler):
 
 
 # ====== Команды ======
+async def connect_human_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await _call_service_and_reply(update, "connect_human", svc.connect_human_api)
+
 async def product_count_manual_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await _call_service_and_reply(update, "product_count_manual", svc.product_count_manual)
 
@@ -140,6 +144,7 @@ def build_app(token: str) -> Application:
     app.add_handler(CommandHandler("help", help_cmd))
 
     # Команды только с подчёркиванием
+    app.add_handler(CommandHandler("connect_human", connect_human_cmd))
     app.add_handler(CommandHandler("product_count_manual", product_count_manual_cmd))
     app.add_handler(CommandHandler("product_count", product_count_cmd))
     app.add_handler(CommandHandler("change_product", change_product_cmd))
