@@ -129,31 +129,31 @@ class FatSecretService:
 
         if not isinstance(serving_list, list):
             serving_list = [serving_list]
-        
+
         serving_100g = None
         for serving in serving_list:
             try:
                 metric_amount = float(serving.get('metric_serving_amount', 0))
                 metric_unit = str(serving.get('metric_serving_unit', '')).lower()
-                
+
                 if metric_amount == 100.0 and metric_unit in ['g', 'ml', 'gram', 'milliliter']:
                     serving_100g = serving
                     break
             except (ValueError, TypeError):
                 continue
-        
+
         if not serving_100g:
             for serving in serving_list:
                 try:
                     metric_amount = float(serving.get('metric_serving_amount', 0))
                     metric_unit = str(serving.get('metric_serving_unit', '')).lower()
-                    
+
                     if metric_amount > 0 and metric_unit in ['g', 'ml', 'gram', 'milliliter']:
                         serving_100g = serving
                         break
                 except (ValueError, TypeError):
                     continue
-        
+
         if serving_100g:
             try:
                 metric_amount = float(serving_100g.get('metric_serving_amount', 1))
@@ -161,17 +161,17 @@ class FatSecretService:
             except (ValueError, TypeError):
                 metric_amount = 1.0
                 metric_unit = 'g'
-            
+
             if metric_amount > 0:
                 multiplier = 100.0 / metric_amount
             else:
                 multiplier = 1.0
-            
+
             if 'ml' in metric_unit or 'milliliter' in metric_unit:
                 serving_desc = "100 мл"
             else:
                 serving_desc = "100 г"
-            
+
             return CaloriesResponse(
                 food_name=food_details.get('food_name', food_name),
                 calories=float(serving_100g.get('calories', 0)) * multiplier,
@@ -180,7 +180,7 @@ class FatSecretService:
                 fat=float(serving_100g.get('fat', 0)) * multiplier,
                 carbohydrates=float(serving_100g.get('carbohydrate', 0)) * multiplier,
             )
-        
+
         serving = serving_list[0]
         return CaloriesResponse(
             food_name=food_details.get('food_name', food_name),
