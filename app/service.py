@@ -1,8 +1,6 @@
 from typing import Optional
 from uuid import UUID
-from app.utils.database_mock import DatabaseMock
-from app.fatsecret_service_mock import FatSecretServiceMock
-from app.human_api_service_mock import HumanApiServiceMock
+from app.mocks import DatabaseMock, FatSecretServiceMock, HumanApiServiceMock
 from app.models import CaloriesResponse
 
 
@@ -12,10 +10,14 @@ class MainService:
         self.fatsecret = FatSecretServiceMock()
         self.human_api = HumanApiServiceMock()
 
-    async def start_user(self, user_id: UUID, chat_id: UUID):
-        user = await self.db.get_user(user_id)
+    async def get_or_create_user_by_chat_id(self, chat_id: int) -> UUID:
+        user = await self.db.get_user_by_chat_id(chat_id)
         if not user:
-            await self.db.create_user(user_id, chat_id)
+            user = await self.db.create_user(chat_id)
+        return user.id
+
+    async def start_user(self, chat_id: int):
+        await self.get_or_create_user_by_chat_id(chat_id)
 
     async def product_count_manual(self, user_id: UUID, product_name: str, calories_burned: int) -> Optional[float]:
         product_info = self.fatsecret.get_calories(product_name)
@@ -25,7 +27,7 @@ class MainService:
             return None
         return calories_burned / product_info.calories
 
-    async def product_count(self, user_id: UUID, days: Optional[int] = None) -> Optional[float]:
+    async def product_count(self, user_id: UUID, days: Optional[int] = None) -> Optional[dict]:
         user = await self.db.get_user(user_id)
         if not user:
             return None
@@ -34,7 +36,7 @@ class MainService:
         if not product:
             return None
 
-        calories_burned = self.human_api.get_calories_burned(product.name)
+        calories_burned = self.human_api.get_calories_burned(days)
         if calories_burned is None:
             return None
 
@@ -43,21 +45,25 @@ class MainService:
 
         if product.calories == 0:
             return None
-        return total_calories / product.calories
+
+        amount = total_calories / product.calories
+        return {
+            "amount": amount,
+            "product_name": product.name,
+            "calories": product.calories
+        }
 
     async def change_product(self, user_id: UUID, product_name: str) -> bool:
-        product_info = self.fatsecret.get_calories(product_name)
+        if await self.db.exist_product(product_name):
+            product = await self.db.get_product_by_name(product_name)
+            await self.db.update_user_product(user_id, product.id)
+            return True
+
+        product_info = self.fatsecret.search_food(product_name)
         if not product_info:
             return False
 
-        if not await self.db.exist_product(product_name):
-            product = await self.db.create_product(product_name, int(product_info.calories))
-        else:
-            for p in self.db.products.values():
-                if p.name == product_name:
-                    product = p
-                    break
-
+        product = await self.db.create_product(product_info['food_name'], int(product_info['calories']))
         await self.db.update_user_product(user_id, product.id)
         return True
 
@@ -68,7 +74,7 @@ class MainService:
         except:
             return False
 
-    async def get_product(self, user_id: UUID) -> Optional[str]:
+    async def get_product(self, user_id: UUID) -> Optional[dict]:
         user = await self.db.get_user(user_id)
         if not user:
             return None
@@ -77,4 +83,7 @@ class MainService:
         if not product:
             return None
 
-        return f"{product.name} - {product.calories} ккал/100г"
+        return {
+            "name": product.name,
+            "calories": product.calories
+        }

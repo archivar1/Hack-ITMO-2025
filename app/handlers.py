@@ -7,23 +7,40 @@ service = MainService()
 
 def process_text(model: Dict[str, Any]) -> str:
     raw = (model.get("raw_text") or "").strip()
-    user_id = model.get("user", {}).get("id")
-    who = f" (user_id={user_id})" if user_id is not None else ""
+    chat_id = model.get("chat", {}).get("id")
+    who = f" (chat_id={chat_id})" if chat_id is not None else ""
     return f"Ты написал{who}: {raw}"
 
 
 async def start(model: Dict[str, Any]) -> str:
-    user_id = UUID(model.get("user", {}).get("id"))
-    chat_id = UUID(model.get("chat", {}).get("id", str(user_id)))
-    await service.start_user(user_id, chat_id)
+    chat_id = model.get("chat", {}).get("id")
+    if chat_id is None:
+        return "Ошибка: не удалось определить пользователя"
+
+    await service.start_user(chat_id)
     return "Бот запущен! Используй команды для работы."
 
 
 async def product_count_manual(model: Dict[str, Any]) -> str:
-    user_id = UUID(model.get("user", {}).get("id"))
-    product_name = model.get("product_name", "")
-    calories = model.get("calories", 0)
+    chat_id = model.get("chat", {}).get("id")
+    if chat_id is None:
+        return "Ошибка: не удалось определить пользователя"
 
+    args_text = model.get("args_text", "").strip()
+    if not args_text:
+        return "Использование: /product_count_manual <название продукта> <калории>\nНапример: /product_count_manual яблоко 100"
+
+    parts = args_text.rsplit(maxsplit=1)
+    if len(parts) < 2:
+        return "Использование: /product_count_manual <название продукта> <калории>\nНапример: /product_count_manual яблоко 100"
+
+    product_name = parts[0].strip()
+    try:
+        calories = int(parts[1])
+    except ValueError:
+        return "Ошибка: калории должны быть числом"
+
+    user_id = await service.get_or_create_user_by_chat_id(chat_id)
     result = await service.product_count_manual(user_id, product_name, calories)
     if result is None:
         return "Продукт не найден"
@@ -32,21 +49,34 @@ async def product_count_manual(model: Dict[str, Any]) -> str:
 
 
 async def product_count(model: Dict[str, Any]) -> str:
-    user_id = UUID(model.get("user", {}).get("id"))
+    chat_id = model.get("chat", {}).get("id")
+    if chat_id is None:
+        return "Ошибка: не удалось определить пользователя"
+
+    user_id = await service.get_or_create_user_by_chat_id(chat_id)
     days = model.get("days")
 
     result = await service.product_count(user_id, days)
     if result is None:
         return "Не удалось рассчитать"
 
+    amount = result["amount"]
+    product_name = result["product_name"]
     days_str = f" за {days} дней" if days else ""
-    return f"Можешь съесть {result:.1f}г{days_str}"
+    return f"Можешь съесть {amount:.1f}г {product_name}{days_str}"
 
 
 async def change_product(model: Dict[str, Any]) -> str:
-    user_id = UUID(model.get("user", {}).get("id"))
-    product_name = model.get("product_name", "")
+    chat_id = model.get("chat", {}).get("id")
+    if chat_id is None:
+        return "Ошибка: не удалось определить пользователя"
 
+    args_text = model.get("args_text", "").strip()
+    if not args_text:
+        return "Использование: /change_product <название продукта>\nНапример: /change_product яблоко"
+
+    product_name = args_text
+    user_id = await service.get_or_create_user_by_chat_id(chat_id)
     result = await service.change_product(user_id, product_name)
     if not result:
         return "Продукт не найден"
@@ -55,10 +85,25 @@ async def change_product(model: Dict[str, Any]) -> str:
 
 
 async def add_custom_product(model: Dict[str, Any]) -> str:
-    user_id = UUID(model.get("user", {}).get("id"))
-    product_name = model.get("product_name", "")
-    calories = model.get("calories", 0)
+    chat_id = model.get("chat", {}).get("id")
+    if chat_id is None:
+        return "Ошибка: не удалось определить пользователя"
 
+    args_text = model.get("args_text", "").strip()
+    if not args_text:
+        return "Использование: /add_custom_product <название продукта> <калории>\nНапример: /add_custom_product яблоко 52"
+
+    parts = args_text.rsplit(maxsplit=1)
+    if len(parts) < 2:
+        return "Использование: /add_custom_product <название продукта> <калории>\nНапример: /add_custom_product яблоко 52"
+
+    product_name = parts[0].strip()
+    try:
+        calories = int(parts[1])
+    except ValueError:
+        return "Ошибка: калории должны быть числом"
+
+    user_id = await service.get_or_create_user_by_chat_id(chat_id)
     result = await service.add_custom_product(user_id, product_name, calories)
     if not result:
         return "Продукт уже существует"
@@ -71,10 +116,14 @@ async def notify(model: Dict[str, Any]) -> str:
 
 
 async def get_product(model: Dict[str, Any]) -> str:
-    user_id = UUID(model.get("user", {}).get("id"))
+    chat_id = model.get("chat", {}).get("id")
+    if chat_id is None:
+        return "Ошибка: не удалось определить пользователя"
+
+    user_id = await service.get_or_create_user_by_chat_id(chat_id)
 
     result = await service.get_product(user_id)
     if result is None:
         return "Продукт не найден"
 
-    return f"Текущий продукт: {result}"
+    return f"Текущий продукт: {result['name']} ({result['calories']} ккал/100г)"

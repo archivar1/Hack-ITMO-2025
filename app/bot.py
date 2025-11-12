@@ -13,7 +13,7 @@ from telegram.ext import (
 )
 
 from app.config import get_settings
-from app import service as svc
+from app import handlers
 
 
 logging.basicConfig(
@@ -80,7 +80,10 @@ def _build_full_model(update: Update, command: str) -> Dict[str, Any]:
 
 # ====================== ОБРАБОТЧИКИ ======================
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Привет! Я бот. Команды: /help")
+    model = _build_full_model(update, "start")
+    log.info(f"Start command: {model}")
+    reply = await handlers.start(model)
+    await update.message.reply_text(reply)
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = (
@@ -102,31 +105,31 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def _call_service_and_reply(update: Update, command: str, handler):
     model = _build_full_model(update, command)
     try:
-        reply = handler(model)
+        reply = await handler(model)
     except Exception as e:
         log.exception("Service handler failed for %s: %s", command, e)
-        reply = f"Заглушка: /{command} — реализация появится позже."
+        reply = f"Ошибка: {str(e)}"
     await update.message.reply_text(reply)
 
 
 # ====== Команды ======
 async def product_count_manual_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "product-count-manual", svc.product_count_manual)
+    await _call_service_and_reply(update, "product-count-manual", handlers.product_count_manual)
 
 async def product_count_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "product-count", svc.product_count)
+    await _call_service_and_reply(update, "product-count", handlers.product_count)
 
 async def change_product_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "change-product", svc.change_product)
+    await _call_service_and_reply(update, "change-product", handlers.change_product)
 
 async def add_custom_product_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "add-custom-product", svc.add_custom_product)
+    await _call_service_and_reply(update, "add-custom-product", handlers.add_custom_product)
 
 async def notify_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "notify", svc.notify)
+    await _call_service_and_reply(update, "notify", handlers.notify)
 
 async def get_product_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "get-product", svc.get_product)
+    await _call_service_and_reply(update, "get-product", handlers.get_product)
 
 
 # ====== Алиасы с дефисами через Regex ======
@@ -151,7 +154,7 @@ async def hyphen_alias_router(update: Update, context: ContextTypes.DEFAULT_TYPE
 # ====== Текст ======
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     model = _build_full_model(update, "text")
-    reply = svc.process_text(model)
+    reply = handlers.process_text(model)
     await update.message.reply_text(reply)
 
 
