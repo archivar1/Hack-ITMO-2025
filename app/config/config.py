@@ -8,7 +8,6 @@ class DefaultSettings(BaseSettings):
     POSTGRES_PORT: int
     POSTGRES_PASSWORD: str
     TELEGRAM_BOT_TOKEN: str
-    PATH_PREFIX: str
     BACKEND_HOST: str
     BACKEND_PORT: int
     WEBHOOK_URL: str
