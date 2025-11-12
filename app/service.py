@@ -1,29 +1,89 @@
-from typing import Dict, Any
+from typing import Optional
+from uuid import UUID
+from app.mocks import DatabaseMock, FatSecretServiceMock, HumanApiServiceMock
+from app.models import CaloriesResponse
 
 
-# ====== ОБРАБОТКА СВОБОДНОГО ТЕКСТА ======
-def process_text(model: Dict[str, Any]) -> str:
-    raw = (model.get("raw_text") or "").strip()
-    user_id = model.get("user", {}).get("id")
-    who = f" (user_id={user_id})" if user_id is not None else ""
-    return f"Ты написал{who}: {raw}"
+class MainService:
+    def __init__(self):
+        self.db = DatabaseMock()
+        self.fatsecret = FatSecretServiceMock()
+        self.human_api = HumanApiServiceMock()
 
+    async def get_or_create_user_by_chat_id(self, chat_id: int) -> UUID:
+        user = await self.db.get_user_by_chat_id(chat_id)
+        if not user:
+            user = await self.db.create_user(chat_id)
+        return user.id
 
-# ====== ЗАГЛУШКИ ДЛЯ КОМАНД ======
-def product_count_manual(model: Dict[str, Any]) -> str:
-    return "Заглушка: /product_count_manual — реализация появится позже."
+    async def start_user(self, chat_id: int):
+        await self.get_or_create_user_by_chat_id(chat_id)
 
-def product_count(model: Dict[str, Any]) -> str:
-    return "Заглушка: /product_count — реализация появится позже."
+    async def product_count_manual(self, user_id: UUID, product_name: str, calories_burned: int) -> Optional[float]:
+        product_info = self.fatsecret.get_calories(product_name)
+        if not product_info:
+            return None
+        if product_info.calories == 0:
+            return None
+        return calories_burned / product_info.calories
 
-def change_product(model: Dict[str, Any]) -> str:
-    return "Заглушка: /change_product — реализация появится позже."
+    async def product_count(self, user_id: UUID, days: Optional[int] = None) -> Optional[dict]:
+        user = await self.db.get_user(user_id)
+        if not user:
+            return None
 
-def add_custom_product(model: Dict[str, Any]) -> str:
-    return "Заглушка: /add_custom_product — реализация появится позже."
+        product = await self.db.get_product(user.curr_product_id)
+        if not product:
+            return None
 
-def notify(model: Dict[str, Any]) -> str:
-    return "Заглушка: /notify — реализация появится позже."
+        calories_burned = self.human_api.get_calories_burned(days)
+        if calories_burned is None:
+            return None
 
-def get_product(model: Dict[str, Any]) -> str:
-    return "Заглушка: /get_product — реализация появится позже."
+        multiplier = days if days else 1
+        total_calories = calories_burned * multiplier
+
+        if product.calories == 0:
+            return None
+
+        amount = total_calories / product.calories
+        return {
+            "amount": amount,
+            "product_name": product.name,
+            "calories": product.calories
+        }
+
+    async def change_product(self, user_id: UUID, product_name: str) -> bool:
+        if await self.db.exist_product(product_name):
+            product = await self.db.get_product_by_name(product_name)
+            await self.db.update_user_product(user_id, product.id)
+            return True
+
+        product_info = self.fatsecret.search_food(product_name)
+        if not product_info:
+            return False
+
+        product = await self.db.create_product(product_info['food_name'], int(product_info['calories']))
+        await self.db.update_user_product(user_id, product.id)
+        return True
+
+    async def add_custom_product(self, user_id: UUID, product_name: str, calories: int) -> bool:
+        try:
+            await self.db.create_product(product_name, calories)
+            return True
+        except:
+            return False
+
+    async def get_product(self, user_id: UUID) -> Optional[dict]:
+        user = await self.db.get_user(user_id)
+        if not user:
+            return None
+
+        product = await self.db.get_product(user.curr_product_id)
+        if not product:
+            return None
+
+        return {
+            "name": product.name,
+            "calories": product.calories
+        }
