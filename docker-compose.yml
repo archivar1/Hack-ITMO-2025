@@ -30,6 +30,10 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - SECRET_TOKEN=${SECRET_TOKEN}
+      - FATSECRET_CONSUMER_KEY=${FATSECRET_CONSUMER_KEY}
+      - FATSECRET_CONSUMER_SECRET=${FATSECRET_CONSUMER_SECRET}
       - PYTHONPATH=/app
     env_file:
       - .env
@@ -44,6 +48,15 @@ services:
       retries: 3
       start_period: 40s
 
-volumes:
-  pgdata:
+  telegram-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    restart: unless-stopped
+    command: ["python", "-m", "app.bot"]
 
