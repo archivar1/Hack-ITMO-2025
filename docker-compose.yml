@@ -23,6 +23,7 @@ services:
       start_period: 30s
       start_interval: 3s
 
+
   app:
     build:
       context: .
@@ -60,3 +61,5 @@ services:
     restart: unless-stopped
     command: ["python", "-m", "app.bot"]
 
+volumes:
+  pgdata:

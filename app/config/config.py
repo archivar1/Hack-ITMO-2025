@@ -12,6 +12,9 @@ class DefaultSettings(BaseSettings):
     BACKEND_PORT: int
     WEBHOOK_URL: str
     SECRET_TOKEN: str
+    # FatSecret API OAuth2 credentials
+    FATSECRET_CONSUMER_KEY: str  # client id
+    FATSECRET_CONSUMER_SECRET: str  #
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
