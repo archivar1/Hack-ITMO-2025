@@ -28,7 +28,18 @@ class Database:
                 await session.rollback()
                 raise (f"Error getting user with id {user_id}")
 
-    async def create_user(self, chat_id: UUID) -> Optional[User]:
+    async def get_user_by_chat_id(self, chat_id: str) -> Optional[User]:
+        async for session in self.get_session():
+            try:
+                query = select(User).where(User.chat_id == chat_id)
+                result = await session.execute(query)
+                curr_user = result.scalar_one_or_none()
+                return curr_user
+            except Exception as e:
+                await session.rollback()
+                raise (f"Error getting user with chat_id {chat_id}")
+
+    async def create_user(self, chat_id: str) -> Optional[User]:
         async for session in self.get_session():
             query = select(Product).where(Product.name == 'Beer')
             result = await session.execute(query)
@@ -65,7 +76,8 @@ class Database:
                 await session.rollback()
                 raise (f"Error creating product with name {product_name}, product already exists")
 
-    async def get_product(self, product_name: str) -> Optional[Product]:
+
+    async def get_product_by_name(self, product_name: str) -> Optional[Product]:
         async for session in self.get_session():
             try:
                 query = select(Product).where(Product.name == product_name)
@@ -74,4 +86,17 @@ class Database:
                 return curr_product
             except Exception as e:
                 await session.rollback()
-                raise (f"Error getting product with id {product_name}")
+                raise (f"Error getting product with name {product_name}")
+
+    async def update_user_product(self, user_id: UUID, product_id: UUID):
+        async for session in self.get_session():
+            try:
+                query = select(User).where(User.id == user_id)
+                result = await session.execute(query)
+                user = result.scalar_one_or_none()
+                if user:
+                    user.curr_product_id = product_id
+                    await session.commit()
+            except Exception as e:
+                await session.rollback()
+                raise (f"Error updating user product")

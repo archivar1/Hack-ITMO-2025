@@ -10,4 +10,5 @@ class Product(DeclarativeBase):
     name = Column(String, nullable=False, unique=True)
     calories = Column(Integer, nullable=False)
 
-
+    def __repr__(self):
+        return f"Product(id={self.id}, name='{self.name}', calories={self.calories})"
