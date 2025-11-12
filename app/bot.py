@@ -53,8 +53,6 @@ def _extract_args_text(text: str, command: str) -> str:
     variants = [
         f"/{command} ",
         f"/{command}@",
-        f"/{command.replace('-', '_')} ",
-        f"/{command.replace('-', '_')}@",
     ]
     for p in variants:
         if text.startswith(p):
@@ -93,8 +91,6 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/add_custom_product — добавить персональный продукт\n"
         "/notify — авто-оповещение за прошлый день\n"
         "/get_product — показать текущий продукт\n"
-        "\n"
-        "Можно вводить и варианты с подчёркиванием: /product_count_manual и т.д."
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
@@ -111,41 +107,22 @@ async def _call_service_and_reply(update: Update, command: str, handler):
 
 # ====== Команды ======
 async def product_count_manual_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "product-count-manual", svc.product_count_manual)
+    await _call_service_and_reply(update, "product_count_manual", svc.product_count_manual)
 
 async def product_count_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "product-count", svc.product_count)
+    await _call_service_and_reply(update, "product_count", svc.product_count)
 
 async def change_product_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "change-product", svc.change_product)
+    await _call_service_and_reply(update, "change_product", svc.change_product)
 
 async def add_custom_product_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "add-custom-product", svc.add_custom_product)
+    await _call_service_and_reply(update, "add_custom_product", svc.add_custom_product)
 
 async def notify_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await _call_service_and_reply(update, "notify", svc.notify)
 
 async def get_product_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await _call_service_and_reply(update, "get-product", svc.get_product)
-
-
-# ====== Алиасы с дефисами через Regex ======
-async def hyphen_alias_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    text = (update.effective_message.text or "").split()[0]
-    cmd = text.split("@", 1)[0].lstrip("/")
-    mapping = {
-        "product-count-manual": product_count_manual_cmd,
-        "product-count": product_count_cmd,
-        "change-product": change_product_cmd,
-        "add-custom-product": add_custom_product_cmd,
-        "notify": notify_cmd,
-        "get-product": get_product_cmd,
-    }
-    handler = mapping.get(cmd)
-    if handler:
-        await handler(update, context)
-    else:
-        await update.message.reply_text("Неизвестная команда. Напиши /help.")
+    await _call_service_and_reply(update, "get_product", svc.get_product)
 
 
 # ====== Текст ======
@@ -162,21 +139,13 @@ def build_app(token: str) -> Application:
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("help", help_cmd))
 
-    # Валидные bot-команды с подчёркиванием
+    # Команды только с подчёркиванием
     app.add_handler(CommandHandler("product_count_manual", product_count_manual_cmd))
     app.add_handler(CommandHandler("product_count", product_count_cmd))
     app.add_handler(CommandHandler("change_product", change_product_cmd))
     app.add_handler(CommandHandler("add_custom_product", add_custom_product_cmd))
     app.add_handler(CommandHandler("notify", notify_cmd))
     app.add_handler(CommandHandler("get_product", get_product_cmd))
-
-    # Алиасы с дефисами
-    app.add_handler(MessageHandler(filters.Regex(r"^/(product\-count\-manual)\b"), hyphen_alias_router))
-    app.add_handler(MessageHandler(filters.Regex(r"^/(product\-count)\b"), hyphen_alias_router))
-    app.add_handler(MessageHandler(filters.Regex(r"^/(change\-product)\b"), hyphen_alias_router))
-    app.add_handler(MessageHandler(filters.Regex(r"^/(add\-custom\-product)\b"), hyphen_alias_router))
-    app.add_handler(MessageHandler(filters.Regex(r"^/(notify)\b"), hyphen_alias_router))
-    app.add_handler(MessageHandler(filters.Regex(r"^/(get\-product)\b"), hyphen_alias_router))
 
     # Обычный текст
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
