@@ -1,5 +1,30 @@
 services:
-  web:
+
+  postgres:
+    container_name: ${POSTGRES_HOST}
+    hostname: ${POSTGRES_HOST}
+    image: postgres:18-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    env_file:
+      - ./.env
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+      start_interval: 3s
+
+
+  app:
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,12 +33,17 @@ services:
     environment:
       - WEBHOOK_URL=${WEBHOOK_URL}
       - SECRET_TOKEN=${SECRET_TOKEN}
+      - FATSECRET_CONSUMER_KEY=${FATSECRET_CONSUMER_KEY}
+      - FATSECRET_CONSUMER_SECRET=${FATSECRET_CONSUMER_SECRET}
       - PYTHONPATH=/app
     env_file:
       - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://backend:8000/api/v1/swagger"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -31,6 +61,5 @@ services:
     restart: unless-stopped
     command: ["python", "-m", "app.bot"]
 
-networks:
-  default:
-    name: app
+volumes:
+  pgdata:
