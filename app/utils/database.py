@@ -17,8 +17,8 @@ class Database:
             finally:
                 await session.close()
 
-    async def get_user(self, user_id: int) -> Optional[User]:
-        async for session in get_session():
+    async def get_user(self, user_id: UUID) -> Optional[User]:
+        async for session in self.get_session():
             try:
                 query = select(User).where(User.id == user_id)
                 result = await session.execute(query)
@@ -28,8 +28,8 @@ class Database:
                 await session.rollback()
                 raise (f"Error getting user with id {user_id}")
 
-    async def create_user(self, user_id: UUID, chat_id: UUID) -> Optional[User]:
-        async for session in get_session():
+    async def create_user(self, chat_id: UUID) -> Optional[User]:
+        async for session in self.get_session():
             query = select(Product).where(Product.name == 'Beer')
             result = await session.execute(query)
             default_product_id = result.scalar_one_or_none()
@@ -44,7 +44,7 @@ class Database:
                 await session.rollback()
 
     async def exist_product(self, product_name: str) -> bool:
-        async for session in get_session():
+        async for session in self.get_session():
             query = select(Product).where(Product.name == product_name)
             result = (await session.execute(query)).scalar_one_or_none()
             if result:
@@ -55,7 +55,7 @@ class Database:
     async def create_product(self, product_name: str) -> Optional[Product]:
         if self.exist_product(product_name):
             raise Exception("Product already exists")
-        async for session in get_session():
+        async for session in self.get_session():
             product = session.add(Product(name=product_name))
             try:
                 await session.commit()
@@ -65,13 +65,13 @@ class Database:
                 await session.rollback()
                 raise (f"Error creating product with name {product_name}, product already exists")
 
-    async def get_product(self, product_id: int) -> Optional[Product]:
-        async for session in get_session():
+    async def get_product(self, product_name: str) -> Optional[Product]:
+        async for session in self.get_session():
             try:
-                query = select(Product).where(Product.id == product_id)
+                query = select(Product).where(Product.name == product_name)
                 result = await session.execute(query)
                 curr_product = result.scalar_one_or_none()
                 return curr_product
             except Exception as e:
                 await session.rollback()
-                raise (f"Error getting product with id {product_id}")
+                raise (f"Error getting product with id {product_name}")
