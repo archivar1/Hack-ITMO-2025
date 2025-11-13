@@ -1,23 +1,24 @@
 from typing import Optional
 from uuid import UUID
 from app.mocks import DatabaseMock, FatSecretServiceMock, HumanApiServiceMock
+from app.utils.database import Database
 from app.fatsecret_service import FatSecretService
 from app.models import CaloriesResponse
 
 
 class MainService:
     def __init__(self):
-        self.db = DatabaseMock()
+        self.db = Database()
         self.fatsecret = FatSecretService()
         self.human_api = HumanApiServiceMock()
 
-    async def get_or_create_user_by_chat_id(self, chat_id: int) -> UUID:
+    async def get_or_create_user_by_chat_id(self, chat_id: str) -> UUID:
         user = await self.db.get_user_by_chat_id(chat_id)
         if not user:
             user = await self.db.create_user(chat_id)
         return user.id
 
-    async def start_user(self, chat_id: int):
+    async def start_user(self, chat_id: str):
         await self.get_or_create_user_by_chat_id(chat_id)
 
     async def product_count_manual(self, user_id: UUID, product_name: str, calories_burned: int) -> Optional[float]:

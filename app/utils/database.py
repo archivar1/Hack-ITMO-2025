@@ -1,5 +1,5 @@
 from typing import Dict, Optional, AsyncGenerator
-from uuid import UUID
+from uuid import UUID, uuid4
 from sqlalchemy.sql.annotation import Annotated
 from app.database.models import User, Product
 from app.database.connection import get_session
@@ -44,7 +44,7 @@ class Database:
             query = select(Product).where(Product.name == 'Beer')
             result = await session.execute(query)
             default_product_id = result.scalar_one_or_none()
-            user = User(chat_id=chat_id, curr_product_id=default_product_id)
+            user = User(id=uuid4(), chat_id=chat_id, curr_product_id=default_product_id)
 
             session.add(user)
             try:
@@ -63,11 +63,11 @@ class Database:
             return True
         return False
 
-    async def create_product(self, product_name: str) -> Optional[Product]:
+    async def create_product(self, product_name: str, calories: int) -> Optional[Product]:
         if self.exist_product(product_name):
             raise Exception("Product already exists")
         async for session in self.get_session():
-            product = session.add(Product(name=product_name))
+            product = session.add(Product(id=uuid4(), name=product_name, calories=calories))
             try:
                 await session.commit()
                 await session.refresh(product)
@@ -87,6 +87,17 @@ class Database:
             except Exception as e:
                 await session.rollback()
                 raise (f"Error getting product with name {product_name}")
+
+    async def get_product(self, product_id: UUID) -> Optional[Product]:
+        async for session in self.get_session():
+            try:
+                query = select(Product).where(Product.id == product_id)
+                result = await session.execute(query)
+                curr_product = result.scalar_one_or_none()
+                return curr_product
+            except Exception as e:
+                await session.rollback()
+                raise (f"Error getting product with id {product_id}")
 
     async def update_user_product(self, user_id: UUID, product_id: UUID):
         async for session in self.get_session():
