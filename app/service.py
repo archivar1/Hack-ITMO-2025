@@ -26,7 +26,7 @@ class MainService:
             return None
         if product_info.calories == 0:
             return None
-        return calories_burned / product_info.calories
+        return (calories_burned / product_info.calories) * 100
 
     async def product_count(self, user_id: UUID, days: Optional[int] = None) -> Optional[dict]:
         user = await self.db.get_user(user_id)
@@ -47,7 +47,7 @@ class MainService:
         if product.calories == 0:
             return None
 
-        amount = total_calories / product.calories
+        amount = (total_calories / product.calories) * 100
         return {
             "amount": amount,
             "product_name": product.name,
