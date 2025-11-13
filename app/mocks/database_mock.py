@@ -34,7 +34,7 @@ class DatabaseMock:
 
     async def create_product(self, product_name: str, calories: int) -> Optional[Product]:
         if await self.exist_product(product_name):
-            raise Exception("Product already exists")
+            raise ValueError(f"Product with name '{product_name}' already exists")
         product = Product(id=uuid4(), name=product_name, calories=calories)
         self.products[product.id] = product
         return product
