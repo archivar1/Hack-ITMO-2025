@@ -5,9 +5,5 @@ Telegram bot for calories conversion
 
 ```bash
 git clone https://github.com/archivar1/Hack-ITMO-2025.git
-poetry install
+make poetry
 make run
-```
-Документация к API
-
-http://localhost:8000/api/v1/swagger
