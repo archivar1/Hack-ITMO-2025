@@ -1,16 +1,16 @@
 from typing import Optional, AsyncGenerator
 from uuid import UUID
+
+from app.database.connection.session import async_session_maker
 from app.database.models import User, Product
-from app.database.connection import get_session
+from app.database.connection import *
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-
-
+from contextlib import asynccontextmanager
 class Database:
-
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
-        async with get_session() as session:
+        async with async_session_maker() as session:
             try:
                 yield session
             finally:
