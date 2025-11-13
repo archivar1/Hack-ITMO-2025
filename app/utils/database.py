@@ -45,7 +45,7 @@ class Database:
             default_product = result.scalar_one_or_none()
             if not default_product:
                 raise ValueError("Default product 'Beer' not found in database")
-
+            
             user = User(chat_id=chat_id, curr_product_id=default_product.id)
             session.add(user)
             try:
@@ -75,6 +75,7 @@ class Database:
             except IntegrityError:
                 await session.rollback()
                 raise ValueError(f"Error creating product with name {product_name}, product already exists")
+
 
     async def get_product_by_name(self, product_name: str) -> Optional[Product]:
         async for session in self.get_session():
